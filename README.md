@@ -69,7 +69,7 @@ Install the MCP server for your user so it’s available across projects in Clau
   ```
 
 ## Tools
-- `ask-cursor`: `{ prompt: string, model?: string, args?: string[], maxChunkChars?: number }`
+- `ask-cursor`: `{ prompt: string, model?: string, args?: string[] }`
 - `hit-cursor`: alias of `ask-cursor`
 - `next-chunk`: `{ cacheKey: string }` Fetch the next chunk sequentially from a cached large response
 - `fetch-chunk`: `{ cacheKey: string, chunkIndex: number }` (optional) Fetch a specific chunk by index
