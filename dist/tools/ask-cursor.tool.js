@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CURSOR_AGENT } from "../constants.js";
+import { CURSOR_AGENT, CHUNKING } from "../constants.js";
 import { executeCommand } from "../utils/commandExecutor.js";
 import { cacheText } from "../utils/chunkCache.js";
 export const askCursorTool = {
@@ -9,6 +9,7 @@ export const askCursorTool = {
         prompt: z.string().min(1, "prompt is required").describe("Prompt or instruction for the agent"),
         model: z.string().optional().describe("Model identifier to use (if supported)"),
         args: z.array(z.string()).optional().describe("Extra raw args passed to the CLI"),
+        pagechunksize: z.number().int().positive().optional().describe("Optional chunk size (characters) for splitting large responses"),
     }),
     prompt: {
         description: "Send a prompt to the Cursor Agent CLI",
@@ -27,8 +28,10 @@ export const askCursorTool = {
             argv.push(...args.args);
         }
         const result = await executeCommand(CURSOR_AGENT.COMMAND, argv, onProgress);
-        // Chunk if too large (fixed internal size)
-        const CHUNK_SIZE = 20000;
+        // Chunk if too large (configurable per request via pagechunksize)
+        const CHUNK_SIZE = typeof args.pagechunksize === 'number'
+            ? Number(args.pagechunksize)
+            : CHUNKING.DEFAULT_CHARS;
         if (result.length > CHUNK_SIZE) {
             const { key, total } = cacheText(result, CHUNK_SIZE);
             return `Response too large; returning first chunk. Use next-chunk with cacheKey to continue.\ncacheKey: ${key}\nchunk: 1/${total}\n\n${result.slice(0, CHUNK_SIZE)}`;

@@ -23,3 +23,12 @@ export const CURSOR_AGENT = {
     HELP: process.env.CURSOR_AGENT_HELP_FLAG || "--help"
   }
 } as const;
+
+// Global chunking configuration for large tool outputs
+// Prefer `MCP_CHUNK_SIZE`, fallback to `CURSOR_AGENT_CHUNK_SIZE`, then default
+export const CHUNKING = {
+  DEFAULT_CHARS: Number.parseInt(
+    process.env.MCP_CHUNK_SIZE ?? process.env.CURSOR_AGENT_CHUNK_SIZE ?? "20000",
+    10
+  )
+} as const;
