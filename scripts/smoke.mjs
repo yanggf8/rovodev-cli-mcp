@@ -1,8 +1,7 @@
-// Simple smoke test for cursor-agent-mcp
-process.env.CURSOR_AGENT_CMD = 'echo';
-process.env.CURSOR_AGENT_PROMPT_FLAG = '-p';
-process.env.CURSOR_AGENT_MODEL_FLAG = '--model';
-process.env.CURSOR_AGENT_HELP_FLAG = '--help';
+// Simple smoke test for rovodev-cli-mcp
+process.env.ROVODEV_CLI_PATH = 'echo';
+process.env.ROVODEV_SUBCOMMAND = 'rovodev run';
+process.env.ROVODEV_HELP_FLAG = '--help';
 
 async function main() {
   const tools = await import('../dist/tools/index.js');
@@ -17,7 +16,7 @@ async function main() {
   const help = await executeTool('Help', {});
   console.log('HELP:', help);
 
-  const ask = await executeTool('ask-cursor', { prompt: 'hello @world', model: 'mistral', args: ['--foo'] });
+  const ask = await executeTool('ask-rovodev', { message: 'hello @world', args: ['--foo'] });
   console.log('ASK:', ask);
 }
 

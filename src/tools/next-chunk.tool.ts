@@ -3,12 +3,12 @@ import { UnifiedTool } from "./registry.js";
 import { getNextChunk } from "../utils/chunkCache.js";
 
 const inputSchema = z.object({
-  cacheKey: z.string().describe("Cache key from a previous ask-cursor response")
+  cacheKey: z.string().describe("Cache key from a previous ask-rovodev response")
 });
 
 export const nextChunkTool: UnifiedTool = {
   name: "next-chunk",
-  description: "Fetch the next chunk for a previously cached large response",
+  description: "Fetch the next chunk for a previously cached large response (from ask-rovodev)",
   zodSchema: inputSchema,
   prompt: {
     description: "Fetch the next chunk of a prior large response",

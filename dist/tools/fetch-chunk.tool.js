@@ -1,12 +1,12 @@
 import { z } from "zod";
 import { getCachedChunk } from "../utils/chunkCache.js";
 const inputSchema = z.object({
-    cacheKey: z.string().describe("Cache key from a previous ask-cursor response"),
+    cacheKey: z.string().describe("Cache key from a previous ask-rovodev response"),
     chunkIndex: z.number().int().min(1).describe("Which chunk to retrieve (1-based index)")
 });
 export const fetchChunkTool = {
     name: "fetch-chunk",
-    description: "Fetch a specific chunk from a previously cached large response",
+    description: "Fetch a specific chunk from a previously cached large response (from ask-rovodev)",
     zodSchema: inputSchema,
     prompt: {
         description: "Fetch a specific chunk of a prior large response",

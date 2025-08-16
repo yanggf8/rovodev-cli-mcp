@@ -1,11 +1,11 @@
 {
-  "name": "cursor-agent-mcp",
+  "name": "rovodev-cli-mcp",
   "version": "0.1.0",
-  "description": "MCP server wrapper for Cursor Agent (configurable CLI)",
+  "description": "MCP server wrapper for Rovodev CLI",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "cursor-agent-mcp": "dist/index.js"
+    "rovodev-cli-mcp": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",

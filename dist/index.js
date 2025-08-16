@@ -5,7 +5,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema, ListPromptsRequestSchema
 import { Logger } from "./utils/logger.js";
 import { PROTOCOL } from "./constants.js";
 import { getToolDefinitions, getPromptDefinitions, executeTool, toolExists, getPromptMessage } from "./tools/index.js";
-const server = new Server({ name: "cursor-agent-mcp", version: "0.1.0" }, { capabilities: { tools: {}, prompts: {}, notifications: {}, logging: {} } });
+const server = new Server({ name: "rovodev-cli-mcp", version: "0.1.0" }, { capabilities: { tools: {}, prompts: {}, notifications: {}, logging: {} } });
 let isProcessing = false;
 let currentOperationName = "";
 let latestOutput = "";
@@ -98,10 +98,10 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     return { messages: [{ role: "user", content: { type: "text", text: message } }] };
 });
 async function main() {
-    Logger.debug("init cursor-agent-mcp");
+    Logger.debug("init rovodev-cli-mcp");
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    Logger.debug("cursor-agent-mcp listening on stdio");
+    Logger.debug("rovodev-cli-mcp listening on stdio");
 }
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 main().catch((err) => { Logger.error("Fatal error:", err); process.exit(1); });

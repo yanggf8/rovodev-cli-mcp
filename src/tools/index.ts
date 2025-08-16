@@ -1,13 +1,13 @@
 import { toolRegistry, UnifiedTool } from "./registry.js";
-import { askCursorTool } from "./ask-cursor.tool.js";
+import { askRovodevTool } from "./ask-rovodev.tool.js";
 import { pingTool, helpTool } from "./simple-tools.js";
 import { fetchChunkTool } from "./fetch-chunk.tool.js";
 import { nextChunkTool } from "./next-chunk.tool.js";
 
-toolRegistry.push(askCursorTool, pingTool, helpTool, fetchChunkTool, nextChunkTool);
+toolRegistry.push(askRovodevTool, pingTool, helpTool, fetchChunkTool, nextChunkTool);
 
-// Alias: hit-cursor behaves exactly like ask-cursor
-const hitCursor: UnifiedTool = { ...askCursorTool, name: "hit-cursor" };
-toolRegistry.push(hitCursor);
+// Alias: hit-rovodev behaves exactly like ask-rovodev
+const hitRovodev: UnifiedTool = { ...askRovodevTool, name: "hit-rovodev" };
+toolRegistry.push(hitRovodev);
 
 export * from "./registry.js";

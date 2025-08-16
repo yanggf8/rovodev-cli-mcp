@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CURSOR_AGENT } from "../constants.js";
+import { ROVODEV } from "../constants.js";
 import { executeCommand } from "../utils/commandExecutor.js";
 export const pingTool = {
     name: "Ping",
@@ -14,10 +14,10 @@ export const pingTool = {
 };
 export const helpTool = {
     name: "Help",
-    description: "Show underlying cursor-agent help output",
+    description: "Show underlying Rovodev CLI help output",
     zodSchema: z.object({}),
     async execute() {
-        const output = await executeCommand(CURSOR_AGENT.COMMAND, [CURSOR_AGENT.FLAGS.HELP]);
+        const output = await executeCommand(ROVODEV.COMMAND, [...ROVODEV.SUBCOMMAND, ROVODEV.FLAGS.HELP]);
         return output;
     },
     prompt: {
