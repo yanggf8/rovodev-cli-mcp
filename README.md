@@ -37,6 +37,12 @@ Environment variables to customize underlying CLI:
 - `ROVODEV_YOLO_FLAG` (default: `--yolo`)
 - `ROVODEV_HELP_FLAG` (default: `--help`)
 
+Chunking configuration (for large responses):
+- `MCP_CHUNK_SIZE` (preferred)
+- `CURSOR_AGENT_CHUNK_SIZE` (compatibility)
+- `ROVODEV_CHUNK_SIZE` (legacy)
+The first one found is used; default is 20000 characters if none are set.
+
 ## Global setup for Claude Code (user scope)
 
 Install the MCP server for your user so it’s available across projects in Claude Code.
@@ -125,9 +131,11 @@ Notes:
 
 - Large responses
   - Use `ask-rovodev` first. If the response is chunked, call `next-chunk` repeatedly with the provided `cacheKey`. You can also fetch a specific page with `fetch-chunk`.
+  - Tune chunk size with env vars (in order of precedence): `MCP_CHUNK_SIZE`, `CURSOR_AGENT_CHUNK_SIZE` (compat), then legacy `ROVODEV_CHUNK_SIZE`.
 
 ## Tools
 - `ask-rovodev`: `{ message?: string, prompt?: string, configFile?: string, shadow?: boolean, verbose?: boolean, restore?: boolean, yolo?: boolean, args?: string[], pagechunksize?: number }`
+  - Tip: If your message starts with dashes (e.g., `--example`), the underlying CLI may interpret it as a flag. Prefer clear text or quote appropriately. In a future version, the server will insert `--` before the message to prevent this.
 - `hit-rovodev`: alias of `ask-rovodev`
 - `next-chunk`: `{ cacheKey: string }` Fetch the next chunk sequentially from a cached large response
 - `fetch-chunk`: `{ cacheKey: string, chunkIndex: number }` (optional) Fetch a specific chunk by index

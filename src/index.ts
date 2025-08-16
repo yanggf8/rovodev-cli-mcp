@@ -24,7 +24,8 @@ const server = new Server(
   { capabilities: { tools: {}, prompts: {}, notifications: {}, logging: {} } },
 );
 
-let isProcessing = false; let currentOperationName = ""; let latestOutput = "";
+// Track progress per request (supports concurrent tool calls)
+const progressContexts = new Map<string | number, { interval: NodeJS.Timeout; opName: string; latestChunk: string; idx: number; ticks: number }>();
 
 async function sendNotification(method: string, params: any) {
   try { await server.notification({ method, params }); } catch (err) { Logger.error("notification failed:", err); }
@@ -41,7 +42,7 @@ async function sendProgressNotification(progressToken: string | number | undefin
 }
 
 function startProgressUpdates(operationName: string, progressToken?: string | number) {
-  isProcessing = true; currentOperationName = operationName; latestOutput = "";
+  if (!progressToken) return;
   const messages = [
     `🧠 ${operationName} - processing...`,
     `📊 ${operationName} - working...`,
@@ -49,24 +50,34 @@ function startProgressUpdates(operationName: string, progressToken?: string | nu
     `⏱️ ${operationName} - might take a while...`,
     `🔍 ${operationName} - still running...`,
   ];
-  let idx = 0; let progress = 0;
-  if (progressToken) sendProgressNotification(progressToken, 0, undefined, `🔍 Starting ${operationName}`);
+  let idx = 0; let ticks = 0;
+  sendProgressNotification(progressToken, 0, undefined, `🔍 Starting ${operationName}`);
   const interval = setInterval(async () => {
-    if (isProcessing && progressToken) {
-      progress += 1;
-      const base = messages[idx % messages.length];
-      const preview = latestOutput.slice(-150).trim();
-      const msg = preview ? `${base}\n📝 Output: ...${preview}` : base;
-      await sendProgressNotification(progressToken, progress, undefined, msg);
-      idx++;
-    } else if (!isProcessing) { clearInterval(interval); }
+    const ctx = progressContexts.get(progressToken);
+    if (!ctx) { clearInterval(interval); return; }
+    ticks += 1;
+    const base = messages[idx % messages.length];
+    const preview = ctx.latestChunk?.slice(-150).trim();
+    const msg = preview ? `${base}\n📝 Output: ...${preview}` : base;
+    await sendProgressNotification(progressToken, ticks, undefined, msg);
+    idx++;
   }, PROTOCOL.KEEPALIVE_INTERVAL);
-  return { interval, progressToken };
+  progressContexts.set(progressToken, { interval, opName: operationName, latestChunk: "", idx, ticks });
 }
 
-function stopProgressUpdates(progressData: { interval: NodeJS.Timeout; progressToken?: string | number }, success: boolean = true) {
-  const op = currentOperationName; isProcessing = false; currentOperationName = ""; clearInterval(progressData.interval);
-  if (progressData.progressToken) sendProgressNotification(progressData.progressToken, 100, 100, success ? `✅ ${op} completed successfully` : `❌ ${op} failed`);
+function updateProgressLatestChunk(progressToken: string | number | undefined, newChunk: string) {
+  if (!progressToken) return;
+  const ctx = progressContexts.get(progressToken);
+  if (ctx) ctx.latestChunk = newChunk;
+}
+
+function stopProgressUpdates(progressToken: string | number | undefined, success: boolean = true) {
+  if (!progressToken) return;
+  const ctx = progressContexts.get(progressToken);
+  if (!ctx) return;
+  clearInterval(ctx.interval);
+  sendProgressNotification(progressToken, 100, 100, success ? `✅ ${ctx.opName} completed successfully` : `❌ ${ctx.opName} failed`);
+  progressContexts.delete(progressToken);
 }
 
 server.setRequestHandler(ListToolsRequestSchema, async (_req: ListToolsRequest): Promise<{ tools: Tool[] }> => ({ tools: getToolDefinitions() as unknown as Tool[] }));
@@ -76,15 +87,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
   if (!toolExists(toolName)) throw new Error(`Unknown tool: ${toolName}`);
 
   const progressToken = (request.params as any)._meta?.progressToken;
-  const progressData = startProgressUpdates(toolName, progressToken);
+  startProgressUpdates(toolName, progressToken);
   try {
     const args: ToolArguments = (request.params.arguments as ToolArguments) || {};
     Logger.toolInvocation(toolName, request.params.arguments);
-    const result = await executeTool(toolName, args, (newOutput) => { latestOutput = newOutput; });
-    stopProgressUpdates(progressData, true);
+    const result = await executeTool(toolName, args, (newOutput) => { updateProgressLatestChunk(progressToken, newOutput); });
+    stopProgressUpdates(progressToken, true);
     return { content: [{ type: "text", text: result }], isError: false };
   } catch (error) {
-    stopProgressUpdates(progressData, false);
+    stopProgressUpdates(progressToken, false);
     const message = error instanceof Error ? error.message : String(error);
     return { content: [{ type: "text", text: `Error executing ${toolName}: ${message}` }], isError: true };
   }
