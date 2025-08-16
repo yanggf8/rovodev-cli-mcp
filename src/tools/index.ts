@@ -6,10 +6,6 @@ import { nextChunkTool } from "./next-chunk.tool.js";
 
 toolRegistry.push(askRovodevTool, pingTool, helpTool, fetchChunkTool, nextChunkTool);
 
-// Alias: hit-rovodev behaves exactly like ask-rovodev
-const hitRovodev: UnifiedTool = { ...askRovodevTool, name: "hit-rovodev" };
-toolRegistry.push(hitRovodev);
-
 // Alias: tap-rovodev behaves exactly like ask-rovodev
 const tapRovodev: UnifiedTool = { ...askRovodevTool, name: "tap-rovodev" };
 toolRegistry.push(tapRovodev);

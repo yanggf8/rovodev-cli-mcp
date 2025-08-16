@@ -5,7 +5,7 @@ import { getToolDefinitions, getPromptDefinitions } from '../dist/tools/index.js
   const tools = getToolDefinitions();
   const names = tools.map(t => t.name);
   // Expect core tools to be present
-  for (const n of ['ask-rovodev','hit-rovodev','Ping','Help','fetch-chunk','next-chunk']) {
+  for (const n of ['ask-rovodev','tap-rovodev','Ping','Help','fetch-chunk','next-chunk']) {
     if (!names.includes(n)) throw new Error('Missing tool ' + n);
   }
   // Check that ask-rovodev has input schema with properties
