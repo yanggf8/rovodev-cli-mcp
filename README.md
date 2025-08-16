@@ -135,7 +135,7 @@ Notes:
 
 ## Tools
 - `ask-rovodev`: `{ message?: string, prompt?: string, configFile?: string, shadow?: boolean, verbose?: boolean, restore?: boolean, yolo?: boolean, args?: string[], pagechunksize?: number }`
-  - Tip: If your message starts with dashes (e.g., `--example`), the underlying CLI may interpret it as a flag. Prefer clear text or quote appropriately. In a future version, the server will insert `--` before the message to prevent this.
+  - Tip: If your message starts with dashes (e.g., `--example`), the underlying CLI may interpret it as a flag. The server now inserts `--` before such messages to prevent flag parsing.
 - `hit-rovodev`: alias of `ask-rovodev`
 - `next-chunk`: `{ cacheKey: string }` Fetch the next chunk sequentially from a cached large response
 - `fetch-chunk`: `{ cacheKey: string, chunkIndex: number }` (optional) Fetch a specific chunk by index

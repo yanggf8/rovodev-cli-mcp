@@ -5,6 +5,9 @@ interface CachedText {
   createdAt: number;
 }
 
+interface StreamState { buffer: string; chunkSize: number; }
+const streamState = new Map<string, StreamState>();
+
 const cache = new Map<string, CachedText>();
 const nextIndexByKey = new Map<string, number>();
 
@@ -51,6 +54,39 @@ export function cacheText(text: string, chunkSize: number): { key: string; total
   // First chunk is returned by the initial call; set next index to 2
   nextIndexByKey.set(key, Math.min(2, chunks.length + 1));
   return { key, total: chunks.length };
+}
+
+// Streaming API: allows appending text incrementally without holding the full content in memory first
+export function createStreamingCache(chunkSize: number): { key: string } {
+  const key = randomUUID();
+  cache.set(key, { chunks: [], createdAt: Date.now() });
+  streamState.set(key, { buffer: "", chunkSize });
+  nextIndexByKey.set(key, 1);
+  return { key };
+}
+
+export function appendToStream(key: string, text: string): void {
+  const state = streamState.get(key);
+  const entry = cache.get(key);
+  if (!state || !entry) return;
+  state.buffer += text;
+  while (state.buffer.length >= state.chunkSize) {
+    entry.chunks.push(state.buffer.slice(0, state.chunkSize));
+    state.buffer = state.buffer.slice(state.chunkSize);
+  }
+}
+
+export function finalizeStream(key: string): void {
+  const state = streamState.get(key);
+  const entry = cache.get(key);
+  if (!state || !entry) return;
+  if (state.buffer.length > 0) {
+    entry.chunks.push(state.buffer);
+    state.buffer = "";
+  }
+  streamState.delete(key);
+  // After the first response returns chunk 1, the next call should be 2
+  nextIndexByKey.set(key, Math.min(2, entry.chunks.length + 1));
 }
 
 export function getCachedChunk(key: string, page: number): { chunk: string; total: number } | undefined {

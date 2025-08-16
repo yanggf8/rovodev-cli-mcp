@@ -2,7 +2,7 @@ import { z } from "zod";
 import { UnifiedTool } from "./registry.js";
 import { ROVODEV, ToolArguments, CHUNKING } from "../constants.js";
 import { executeCommand } from "../utils/commandExecutor.js";
-import { cacheText } from "../utils/chunkCache.js";
+import { cacheText, createStreamingCache, appendToStream, finalizeStream, getCachedChunk } from "../utils/chunkCache.js";
 
 export const askRovodevTool: UnifiedTool = {
   name: "ask-rovodev",
@@ -58,16 +58,33 @@ export const askRovodevTool: UnifiedTool = {
       argv.push(msg);
     }
 
-    const result = await executeCommand(ROVODEV.COMMAND, argv, onProgress);
-
-    // Chunk if too large (configurable per request via pagechunksize)
+    // Streaming approach: build chunks incrementally to reduce memory pressure
     const CHUNK_SIZE = typeof (args as any).pagechunksize === 'number'
       ? Number((args as any).pagechunksize)
       : CHUNKING.DEFAULT_CHARS;
-    if (result.length > CHUNK_SIZE) {
-      const { key, total } = cacheText(result, CHUNK_SIZE);
-      return `Response too large; returning first chunk. Use next-chunk with cacheKey to continue.\ncacheKey: ${key}\nchunk: 1/${total}\n\n${result.slice(0, CHUNK_SIZE)}`;
+
+    const { key } = createStreamingCache(CHUNK_SIZE);
+    await executeCommand(
+      ROVODEV.COMMAND,
+      argv,
+      (newOutput) => {
+        appendToStream(key, newOutput);
+        if (onProgress) onProgress(newOutput);
+      },
+      {
+        streaming: true,
+        maxStdoutBuffer: Number.isFinite(Number(process.env.MCP_MAX_STDOUT_SIZE)) ? Number(process.env.MCP_MAX_STDOUT_SIZE) : undefined,
+      }
+    );
+
+    finalizeStream(key);
+
+    // Decide whether to return chunked response header or the full content
+    const first = getCachedChunk(key, 1);
+    if (!first) return "";
+    if (first.total > 1) {
+      return `Response too large; returning first chunk. Use next-chunk with cacheKey to continue.\ncacheKey: ${key}\nchunk: 1/${first.total}\n\n${first.chunk}`;
     }
-    return result;
+    return first.chunk;
   }
 };

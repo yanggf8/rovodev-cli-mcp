@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ROVODEV, CHUNKING } from "../constants.js";
 import { executeCommand } from "../utils/commandExecutor.js";
-import { cacheText } from "../utils/chunkCache.js";
+import { createStreamingCache, appendToStream, finalizeStream, getCachedChunk } from "../utils/chunkCache.js";
 export const askRovodevTool = {
     name: "ask-rovodev",
     description: "Invoke Rovodev agent via 'acli rovodev run'. Supports flags like --config-file, --shadow, --verbose, --restore, --yolo.",
@@ -52,15 +52,27 @@ export const askRovodevTool = {
             }
             argv.push(msg);
         }
-        const result = await executeCommand(ROVODEV.COMMAND, argv, onProgress);
-        // Chunk if too large (configurable per request via pagechunksize)
+        // Streaming approach: build chunks incrementally to reduce memory pressure
         const CHUNK_SIZE = typeof args.pagechunksize === 'number'
             ? Number(args.pagechunksize)
             : CHUNKING.DEFAULT_CHARS;
-        if (result.length > CHUNK_SIZE) {
-            const { key, total } = cacheText(result, CHUNK_SIZE);
-            return `Response too large; returning first chunk. Use next-chunk with cacheKey to continue.\ncacheKey: ${key}\nchunk: 1/${total}\n\n${result.slice(0, CHUNK_SIZE)}`;
+        const { key } = createStreamingCache(CHUNK_SIZE);
+        await executeCommand(ROVODEV.COMMAND, argv, (newOutput) => {
+            appendToStream(key, newOutput);
+            if (onProgress)
+                onProgress(newOutput);
+        }, {
+            streaming: true,
+            maxStdoutBuffer: Number.isFinite(Number(process.env.MCP_MAX_STDOUT_SIZE)) ? Number(process.env.MCP_MAX_STDOUT_SIZE) : undefined,
+        });
+        finalizeStream(key);
+        // Decide whether to return chunked response header or the full content
+        const first = getCachedChunk(key, 1);
+        if (!first)
+            return "";
+        if (first.total > 1) {
+            return `Response too large; returning first chunk. Use next-chunk with cacheKey to continue.\ncacheKey: ${key}\nchunk: 1/${first.total}\n\n${first.chunk}`;
         }
-        return result;
+        return first.chunk;
     }
 };

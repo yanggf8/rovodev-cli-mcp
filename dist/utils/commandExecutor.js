@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 import { Logger } from "./logger.js";
-export async function executeCommand(command, args, onProgress) {
+export async function executeCommand(command, args, onProgress, options) {
     return new Promise((resolve, reject) => {
         const startTime = Date.now();
         Logger.commandExecution(command, args, startTime);
@@ -16,6 +16,8 @@ export async function executeCommand(command, args, onProgress) {
         let stderr = "";
         let isResolved = false;
         let lastReported = 0;
+        const streaming = options?.streaming === true;
+        const maxBuffer = Number.isFinite(Number(options?.maxStdoutBuffer)) ? Number(options?.maxStdoutBuffer) : undefined;
         let timeout;
         if (timeoutMs && timeoutMs > 0) {
             timeout = setTimeout(() => {
@@ -31,11 +33,23 @@ export async function executeCommand(command, args, onProgress) {
             timeout.unref?.();
         }
         child.stdout.on("data", (data) => {
-            stdout += data.toString();
-            if (onProgress && stdout.length > lastReported) {
-                const newContent = stdout.substring(lastReported);
-                lastReported = stdout.length;
-                onProgress(newContent);
+            const chunk = data.toString();
+            if (streaming) {
+                // forward chunk immediately and do not buffer entire output
+                stdout += chunk; // still keep full for tail and success return; can be further optimized later
+                if (onProgress)
+                    onProgress(chunk);
+            }
+            else {
+                stdout += chunk;
+                if (onProgress && stdout.length > lastReported) {
+                    const newContent = stdout.substring(lastReported);
+                    lastReported = stdout.length;
+                    onProgress(newContent);
+                }
+            }
+            if (maxBuffer && stdout.length > maxBuffer) {
+                child.kill("SIGKILL");
             }
         });
         child.stderr.on("data", (data) => {
