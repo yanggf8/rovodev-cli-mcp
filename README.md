@@ -133,6 +133,10 @@ Notes:
   - Use `ask-rovodev` first. If the response is chunked, call `next-chunk` repeatedly with the provided `cacheKey`. You can also fetch a specific page with `fetch-chunk`.
   - Tune chunk size with env vars (in order of precedence): `MCP_CHUNK_SIZE`, `CURSOR_AGENT_CHUNK_SIZE` (compat), then legacy `ROVODEV_CHUNK_SIZE`.
 
+## Tools and streaming
+
+This server supports streaming chunk-caching to reduce memory usage for large outputs. The `ask-rovodev` tool streams the CLI output directly into a chunk cache. If the output exceeds the page chunk size, it returns the first chunk and a `cacheKey` so you can fetch subsequent chunks with `next-chunk` or `fetch-chunk`.
+
 ## Tools
 - `ask-rovodev`: `{ message?: string, prompt?: string, configFile?: string, shadow?: boolean, verbose?: boolean, restore?: boolean, yolo?: boolean, args?: string[], pagechunksize?: number }`
   - Tip: If your message starts with dashes (e.g., `--example`), the underlying CLI may interpret it as a flag. The server now inserts `--` before such messages to prevent flag parsing.
