@@ -141,6 +141,7 @@ This server supports streaming chunk-caching to reduce memory usage for large ou
 - `ask-rovodev`: `{ message?: string, prompt?: string, configFile?: string, shadow?: boolean, verbose?: boolean, restore?: boolean, yolo?: boolean, args?: string[], pagechunksize?: number }`
   - Tip: If your message starts with dashes (e.g., `--example`), the underlying CLI may interpret it as a flag. The server now inserts `--` before such messages to prevent flag parsing.
 - `hit-rovodev`: alias of `ask-rovodev`
+- `tap-rovodev`: alias of `ask-rovodev`
 - `next-chunk`: `{ cacheKey: string }` Fetch the next chunk sequentially from a cached large response
 - `fetch-chunk`: `{ cacheKey: string, chunkIndex: number }` (optional) Fetch a specific chunk by index
 - `Help`: show help from underlying CLI

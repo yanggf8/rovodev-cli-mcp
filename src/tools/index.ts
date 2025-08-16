@@ -10,4 +10,8 @@ toolRegistry.push(askRovodevTool, pingTool, helpTool, fetchChunkTool, nextChunkT
 const hitRovodev: UnifiedTool = { ...askRovodevTool, name: "hit-rovodev" };
 toolRegistry.push(hitRovodev);
 
+// Alias: tap-rovodev behaves exactly like ask-rovodev
+const tapRovodev: UnifiedTool = { ...askRovodevTool, name: "tap-rovodev" };
+toolRegistry.push(tapRovodev);
+
 export * from "./registry.js";

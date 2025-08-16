@@ -7,4 +7,7 @@ toolRegistry.push(askRovodevTool, pingTool, helpTool, fetchChunkTool, nextChunkT
 // Alias: hit-rovodev behaves exactly like ask-rovodev
 const hitRovodev = { ...askRovodevTool, name: "hit-rovodev" };
 toolRegistry.push(hitRovodev);
+// Alias: tap-rovodev behaves exactly like ask-rovodev
+const tapRovodev = { ...askRovodevTool, name: "tap-rovodev" };
+toolRegistry.push(tapRovodev);
 export * from "./registry.js";
