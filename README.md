@@ -142,6 +142,13 @@ Notes:
 - `Help`: show help from underlying CLI
 - `Ping`: connectivity test
 
+Server behavior and tuning via env vars:
+- Logging level: `MCP_LOG_LEVEL` (debug | info | warn | error | silent)
+- Exec timeout: `MCP_EXEC_TIMEOUT_MS` (kill underlying CLI after N ms; includes partial stdout tail in error)
+- Working directory: `MCP_CWD` (set process cwd for the underlying CLI)
+- Chunk cache TTL: `MCP_CHUNK_TTL_MS` (default 20 minutes)
+- Chunk cache max entries: `MCP_CHUNK_MAX_ENTRIES` (default 500)
+
 ### Handling large responses (simple sequential flow)
 
 - If the output is too large, the first `ask-rovodev` call returns page 1 plus a `cacheKey`:

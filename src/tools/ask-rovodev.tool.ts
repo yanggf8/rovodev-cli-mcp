@@ -51,6 +51,10 @@ export const askRovodevTool: UnifiedTool = {
     // Determine message (alias: prompt)
     const msg = (args as any).message ?? (args as any).prompt;
     if (typeof msg === "string" && msg.length > 0) {
+      // If the message looks like a flag (starts with '-') add a separator to prevent flag parsing
+      if (msg.trim().startsWith("-")) {
+        argv.push("--");
+      }
       argv.push(msg);
     }
 

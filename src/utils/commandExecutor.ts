@@ -10,16 +10,35 @@ export async function executeCommand(
     const startTime = Date.now();
     Logger.commandExecution(command, args, startTime);
 
+    const timeoutMs = Number.isFinite(Number(process.env.MCP_EXEC_TIMEOUT_MS)) ? Number(process.env.MCP_EXEC_TIMEOUT_MS) : undefined;
+    const cwd = process.env.MCP_CWD && process.env.MCP_CWD.trim() !== "" ? process.env.MCP_CWD : undefined;
+
     const child = spawn(command, args, {
       env: process.env,
       shell: false,
       stdio: ["ignore", "pipe", "pipe"],
+      cwd,
     });
 
     let stdout = "";
     let stderr = "";
     let isResolved = false;
     let lastReported = 0;
+
+    let timeout: NodeJS.Timeout | undefined;
+    if (timeoutMs && timeoutMs > 0) {
+      timeout = setTimeout(() => {
+        if (!isResolved) {
+          isResolved = true;
+          child.kill("SIGKILL");
+          Logger.error("process timeout:", { timeoutMs });
+          const tail = stdout.length > 2000 ? stdout.slice(-2000) : stdout;
+          reject(new Error(`Command timed out after ${timeoutMs}ms. Partial output (tail): ${tail}`));
+        }
+      }, timeoutMs);
+      // Prevent keeping the event loop alive solely for the timer
+      (timeout as any).unref?.();
+    }
 
     child.stdout.on("data", (data) => {
       stdout += data.toString();
@@ -37,6 +56,7 @@ export async function executeCommand(
     child.on("error", (err) => {
       if (!isResolved) {
         isResolved = true;
+        if (timeout) clearTimeout(timeout);
         Logger.error("process error:", err);
         reject(new Error(`Failed to spawn command: ${err.message}`));
       }
@@ -45,12 +65,14 @@ export async function executeCommand(
     child.on("close", (code) => {
       if (!isResolved) {
         isResolved = true;
+        if (timeout) clearTimeout(timeout);
         if (code === 0) {
           Logger.commandComplete(startTime, code, stdout.length);
           resolve(stdout.trim());
         } else {
           Logger.commandComplete(startTime, code ?? -1);
-          reject(new Error(`Command failed with exit code ${code}: ${stderr.trim() || "Unknown error"}`));
+          const outTail = stdout ? `\nSTDOUT (tail): ${(stdout.length > 2000 ? stdout.slice(-2000) : stdout)}` : "";
+          reject(new Error(`Command failed with exit code ${code}: ${stderr.trim() || "Unknown error"}${outTail}`));
         }
       }
     });

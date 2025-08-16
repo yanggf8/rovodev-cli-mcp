@@ -46,6 +46,10 @@ export const askRovodevTool = {
         // Determine message (alias: prompt)
         const msg = args.message ?? args.prompt;
         if (typeof msg === "string" && msg.length > 0) {
+            // If the message looks like a flag (starts with '-') add a separator to prevent flag parsing
+            if (msg.trim().startsWith("-")) {
+                argv.push("--");
+            }
             argv.push(msg);
         }
         const result = await executeCommand(ROVODEV.COMMAND, argv, onProgress);

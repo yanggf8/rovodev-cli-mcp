@@ -1,6 +1,31 @@
 import { randomUUID } from "crypto";
 const cache = new Map();
 const nextIndexByKey = new Map();
+// TTL and cleanup configuration
+const DEFAULT_TTL_MS = Number.parseInt(process.env.MCP_CHUNK_TTL_MS ?? "1200000", 10); // 20 minutes
+const MAX_CACHE_ENTRIES = Number.isFinite(Number(process.env.MCP_CHUNK_MAX_ENTRIES)) ? Number(process.env.MCP_CHUNK_MAX_ENTRIES) : 500;
+function cleanupExpired(now = Date.now()) {
+    // Remove expired
+    for (const [key, entry] of cache.entries()) {
+        if (now - entry.createdAt > DEFAULT_TTL_MS) {
+            cache.delete(key);
+            nextIndexByKey.delete(key);
+        }
+    }
+    // Enforce max entries (simple FIFO-ish based on createdAt)
+    if (cache.size > MAX_CACHE_ENTRIES) {
+        const entries = Array.from(cache.entries());
+        entries.sort((a, b) => a[1].createdAt - b[1].createdAt);
+        const toDelete = entries.slice(0, cache.size - MAX_CACHE_ENTRIES);
+        for (const [key] of toDelete) {
+            cache.delete(key);
+            nextIndexByKey.delete(key);
+        }
+    }
+}
+// periodic cleanup every ~TTL/2 (min 60s)
+const CLEANUP_INTERVAL = Math.max(60000, Math.floor(DEFAULT_TTL_MS / 2));
+setInterval(() => cleanupExpired(), CLEANUP_INTERVAL).unref?.();
 function splitTextIntoChunks(text, chunkSize) {
     const chunks = [];
     for (let i = 0; i < text.length; i += chunkSize) {
