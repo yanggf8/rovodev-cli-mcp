@@ -139,6 +139,7 @@ This server supports streaming chunk-caching to reduce memory usage for large ou
 
 ## Tools
 - `ask-rovodev`: `{ message?: string, prompt?: string, configFile?: string, shadow?: boolean, verbose?: boolean, restore?: boolean, yolo?: boolean, args?: string[], pagechunksize?: number }`
+  - **Note**: `yolo` mode is enabled by default for non-interactive MCP usage. Set `yolo: false` to disable and require confirmations.
   - Tip: If your message starts with dashes (e.g., `--example`), the underlying CLI may interpret it as a flag. The server now inserts `--` before such messages to prevent flag parsing.
 - `tap-rovodev`: alias of `ask-rovodev`
 - `next-chunk`: `{ cacheKey: string }` Fetch the next chunk sequentially from a cached large response
