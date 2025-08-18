@@ -4,7 +4,7 @@ import { executeCommand } from "../utils/commandExecutor.js";
 import { createStreamingCache, appendToStream, finalizeStream, getCachedChunk } from "../utils/chunkCache.js";
 export const askRovodevTool = {
     name: "ask-rovodev",
-    description: "Invoke Rovodev agent via 'acli rovodev run'. Runs in yolo mode by default for non-interactive MCP usage. Supports flags like --config-file, --shadow, --verbose, --restore.",
+    description: "Invoke Rovodev agent via 'acli rovodev run'. Always runs in yolo mode (non-interactive) for MCP usage. Supports flags like --config-file, --shadow, --verbose, --restore.",
     zodSchema: z.object({
         // Prefer 'message'; keep 'prompt' as backwards-compatible alias
         message: z.string().optional().describe("Initial instruction for the agent"),
@@ -14,7 +14,6 @@ export const askRovodevTool = {
         shadow: z.boolean().optional().describe("Enable shadow mode (--shadow)"),
         verbose: z.boolean().optional().describe("Enable verbose tool output (--verbose)"),
         restore: z.boolean().optional().describe("Continue last session if available (--restore)"),
-        yolo: z.boolean().optional().describe("Run without confirmations (--yolo). Enabled by default for MCP usage; set to false to disable"),
         // Extra passthrough args if needed
         args: z.array(z.string()).optional().describe("Extra raw args passed to the CLI after flags"),
         // Pagination control for very large outputs
@@ -37,10 +36,8 @@ export const askRovodevTool = {
             argv.push(ROVODEV.FLAGS.VERBOSE);
         if (args.restore)
             argv.push(ROVODEV.FLAGS.RESTORE);
-        // Enable yolo mode by default for MCP server usage (non-interactive mode)
-        // Only disable if explicitly set to false
-        if (args.yolo !== false)
-            argv.push(ROVODEV.FLAGS.YOLO);
+        // Always enable yolo mode for MCP server usage (non-interactive mode)
+        argv.push(ROVODEV.FLAGS.YOLO);
         // Extra raw args before the message
         if (Array.isArray(args.args) && args.args.length) {
             argv.push(...args.args);
