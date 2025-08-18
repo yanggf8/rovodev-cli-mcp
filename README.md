@@ -81,6 +81,45 @@ Install the MCP server for your user so it’s available across projects in Clau
   claude mcp remove -s user rovodev
   ```
 
+## Global setup for Amazon Q CLI
+
+Install the MCP server for Amazon Q CLI to use Rovodev tools in Q chat sessions.
+
+- Add with npx (no global npm install required):
+  ```bash
+  q mcp add --name rovodev --command npx --args "-y,rovodev-cli-mcp"
+  ```
+
+- Optional: set environment variables when adding
+  ```bash
+  q mcp add --name rovodev --command npx --args "-y,rovodev-cli-mcp" \
+    --env "ROVODEV_CLI_PATH=acli" \
+    --env "ROVODEV_SUBCOMMAND=rovodev run"
+  ```
+
+- Verify it's installed:
+  ```bash
+  q mcp list
+  ```
+
+- Check server status:
+  ```bash
+  q mcp status --name rovodev
+  ```
+
+- Remove (to update or uninstall):
+  ```bash
+  q mcp remove --name rovodev
+  ```
+
+**Using tools in Q CLI**: Tools are available with the `rovodev___` prefix:
+- `rovodev___ask-rovodev` - Send messages to Rovodev agent
+- `rovodev___tap-rovodev` - Alias for ask-rovodev
+- `rovodev___next-chunk` - Fetch next chunk for large responses
+- `rovodev___fetch-chunk` - Fetch specific chunk by index
+- `rovodev___Help` - Show Rovodev CLI help
+- `rovodev___Ping` - Test connectivity
+
 ## Local development with Claude Code
 
 If you are iterating on this repo and want Claude Code to use your local build:
