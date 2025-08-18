@@ -26,17 +26,15 @@ export const ROVODEV = {
     VERBOSE: process.env.ROVODEV_VERBOSE_FLAG || "--verbose",
     RESTORE: process.env.ROVODEV_RESTORE_FLAG || "--restore",
     YOLO: process.env.ROVODEV_YOLO_FLAG || "--yolo",
-    HELP: process.env.ROVODEV_HELP_FLAG || process.env.CURSOR_AGENT_HELP_FLAG || "--help"
+    HELP: process.env.ROVODEV_HELP_FLAG || "--help"
   }
 } as const;
 
 // Global chunking configuration for large tool outputs
-// Prefer `MCP_CHUNK_SIZE`, fallback to `CURSOR_AGENT_CHUNK_SIZE`, then default
 export const CHUNKING = {
   DEFAULT_CHARS: Number.parseInt(
-    // Prefer MCP_CHUNK_SIZE, then CURSOR_AGENT_CHUNK_SIZE for compatibility, then legacy ROVODEV_CHUNK_SIZE, else default
+    // Prefer MCP_CHUNK_SIZE, then legacy ROVODEV_CHUNK_SIZE, else default
     process.env.MCP_CHUNK_SIZE
-      ?? process.env.CURSOR_AGENT_CHUNK_SIZE
       ?? process.env.ROVODEV_CHUNK_SIZE
       ?? "20000",
     10

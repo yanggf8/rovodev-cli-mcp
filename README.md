@@ -39,7 +39,6 @@ Environment variables to customize underlying CLI:
 
 Chunking configuration (for large responses):
 - `MCP_CHUNK_SIZE` (preferred)
-- `CURSOR_AGENT_CHUNK_SIZE` (compatibility)
 - `ROVODEV_CHUNK_SIZE` (legacy)
 The first one found is used; default is 20000 characters if none are set.
 
@@ -131,7 +130,7 @@ Notes:
 
 - Large responses
   - Use `ask-rovodev` first. If the response is chunked, call `next-chunk` repeatedly with the provided `cacheKey`. You can also fetch a specific page with `fetch-chunk`.
-  - Tune chunk size with env vars (in order of precedence): `MCP_CHUNK_SIZE`, `CURSOR_AGENT_CHUNK_SIZE` (compat), then legacy `ROVODEV_CHUNK_SIZE`.
+  - Tune chunk size with env vars (in order of precedence): `MCP_CHUNK_SIZE`, then legacy `ROVODEV_CHUNK_SIZE`.
 
 ## Tools and streaming
 
