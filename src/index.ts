@@ -18,6 +18,7 @@ import {
 import { Logger } from "./utils/logger.js";
 import { PROTOCOL, ToolArguments } from "./constants.js";
 import { getToolDefinitions, getPromptDefinitions, executeTool, toolExists, getPromptMessage } from "./tools/index.js";
+import { formatErrorForUser } from "./utils/errorHandler.js";
 
 const server = new Server(
   { name: "rovodev-cli-mcp", version: "0.1.0" },
@@ -97,7 +98,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
   } catch (error) {
     stopProgressUpdates(progressToken, false);
     const message = error instanceof Error ? error.message : String(error);
-    return { content: [{ type: "text", text: `Error executing ${toolName}: ${message}` }], isError: true };
+    // Use enhanced error formatting for user-facing error messages
+    const userFriendlyError = formatErrorForUser(error);
+    return { content: [{ type: "text", text: userFriendlyError }], isError: true };
   }
 });
 

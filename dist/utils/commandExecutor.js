@@ -1,11 +1,34 @@
 import { spawn } from "child_process";
 import { Logger } from "./logger.js";
+import { RetryManager, ErrorClassifier } from "./errorHandler.js";
+import { sessionManager } from "./sessionManager.js";
+import { performanceMonitor } from "./performanceMonitor.js";
 export async function executeCommand(command, args, onProgress, options) {
+    // Apply retry logic if specified
+    if (options?.retries && options.retries > 1) {
+        return RetryManager.withRetry(() => executeCommandOnce(command, args, onProgress, options), options.retries, options.backoffMs);
+    }
+    return executeCommandOnce(command, args, onProgress, options);
+}
+async function executeCommandOnce(command, args, onProgress, options) {
     return new Promise((resolve, reject) => {
         const startTime = Date.now();
         Logger.commandExecution(command, args, startTime);
+        // Record command execution start for monitoring
+        const executionId = performanceMonitor.recordCommandStart(command, args);
         const timeoutMs = Number.isFinite(Number(process.env.MCP_EXEC_TIMEOUT_MS)) ? Number(process.env.MCP_EXEC_TIMEOUT_MS) : undefined;
-        const cwd = process.env.MCP_CWD && process.env.MCP_CWD.trim() !== "" ? process.env.MCP_CWD : undefined;
+        // Determine working directory - session takes priority over global MCP_CWD
+        let cwd = process.env.MCP_CWD && process.env.MCP_CWD.trim() !== "" ? process.env.MCP_CWD : undefined;
+        if (options?.sessionId) {
+            const session = sessionManager.getSession(options.sessionId);
+            if (session) {
+                cwd = session.workingDir;
+                Logger.debug("Using session working directory:", cwd);
+            }
+            else {
+                Logger.warn("Session not found, using default working directory:", options.sessionId);
+            }
+        }
         const child = spawn(command, args, {
             env: process.env,
             shell: false,
@@ -23,8 +46,14 @@ export async function executeCommand(command, args, onProgress, options) {
             timeout = setTimeout(() => {
                 if (!isResolved) {
                     isResolved = true;
-                    child.kill("SIGKILL");
-                    Logger.error("process timeout:", { timeoutMs });
+                    // Graceful termination first, then forceful
+                    child.kill("SIGTERM");
+                    setTimeout(() => {
+                        if (!child.killed) {
+                            child.kill("SIGKILL");
+                        }
+                    }, 2000); // Give 2 seconds for graceful shutdown
+                    Logger.error("process timeout:", { timeoutMs, pid: child.pid });
                     const tail = stdout.length > 2000 ? stdout.slice(-2000) : stdout;
                     reject(new Error(`Command timed out after ${timeoutMs}ms. Partial output (tail): ${tail}`));
                 }
@@ -49,7 +78,13 @@ export async function executeCommand(command, args, onProgress, options) {
                 }
             }
             if (maxBuffer && stdout.length > maxBuffer) {
-                child.kill("SIGKILL");
+                Logger.warn("Output buffer exceeded, terminating process:", { maxBuffer, currentSize: stdout.length, pid: child.pid });
+                child.kill("SIGTERM");
+                setTimeout(() => {
+                    if (!child.killed) {
+                        child.kill("SIGKILL");
+                    }
+                }, 1000);
             }
         });
         child.stderr.on("data", (data) => {
@@ -61,7 +96,9 @@ export async function executeCommand(command, args, onProgress, options) {
                 if (timeout)
                     clearTimeout(timeout);
                 Logger.error("process error:", err);
-                reject(new Error(`Failed to spawn command: ${err.message}`));
+                const classified = ErrorClassifier.classify(err);
+                performanceMonitor.recordCommandEnd(command, false, classified.type);
+                reject(new Error(`Failed to spawn command: ${classified.message}`));
             }
         });
         child.on("close", (code) => {
@@ -71,12 +108,16 @@ export async function executeCommand(command, args, onProgress, options) {
                     clearTimeout(timeout);
                 if (code === 0) {
                     Logger.commandComplete(startTime, code, stdout.length);
+                    performanceMonitor.recordCommandEnd(command, true);
                     resolve(stdout.trim());
                 }
                 else {
                     Logger.commandComplete(startTime, code ?? -1);
                     const outTail = stdout ? `\nSTDOUT (tail): ${(stdout.length > 2000 ? stdout.slice(-2000) : stdout)}` : "";
-                    reject(new Error(`Command failed with exit code ${code}: ${stderr.trim() || "Unknown error"}${outTail}`));
+                    const errorMessage = `Command failed with exit code ${code}: ${stderr.trim() || "Unknown error"}${outTail}`;
+                    const classified = ErrorClassifier.classify(new Error(errorMessage));
+                    performanceMonitor.recordCommandEnd(command, false, classified.type);
+                    reject(new Error(classified.message));
                 }
             }
         });

@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { UnifiedTool } from "./registry.js";
 import { ROVODEV, ToolArguments, CHUNKING } from "../constants.js";
-import { executeCommand } from "../utils/commandExecutor.js";
+import { executeCommand, type ExecuteOptions } from "../utils/commandExecutor.js";
 import { cacheText, createStreamingCache, appendToStream, finalizeStream, getCachedChunk } from "../utils/chunkCache.js";
+import { formatErrorForUser } from "../utils/errorHandler.js";
 
 export const askRovodevTool: UnifiedTool = {
   name: "ask-rovodev",
@@ -17,6 +18,13 @@ export const askRovodevTool: UnifiedTool = {
     shadow: z.boolean().optional().describe("Enable shadow mode (--shadow)"),
     verbose: z.boolean().optional().describe("Enable verbose tool output (--verbose)"),
     restore: z.boolean().optional().describe("Continue last session if available (--restore)"),
+
+    // Session management
+    sessionId: z.string().optional().describe("Session ID to use for isolated execution context"),
+
+    // Enhanced error handling
+    retries: z.number().int().min(1).max(5).optional().describe("Number of retry attempts for transient failures (1-5, default: 1)"),
+    backoffMs: z.number().int().positive().optional().describe("Base delay in milliseconds between retries (default: 1000)"),
 
     // Extra passthrough args if needed
     args: z.array(z.string()).optional().describe("Extra raw args passed to the CLI after flags"),
@@ -64,19 +72,32 @@ export const askRovodevTool: UnifiedTool = {
       ? Number((args as any).pagechunksize)
       : CHUNKING.DEFAULT_CHARS;
 
+    // Enhanced execution with session support and retry logic
+    const executeOptions: ExecuteOptions = {
+      streaming: true,
+      maxStdoutBuffer: Number.isFinite(Number(process.env.MCP_MAX_STDOUT_SIZE)) ? Number(process.env.MCP_MAX_STDOUT_SIZE) : undefined,
+      sessionId: (args as any).sessionId,
+      retries: (args as any).retries || 1,
+      backoffMs: (args as any).backoffMs || 1000
+    };
+
     const { key } = createStreamingCache(CHUNK_SIZE);
-    await executeCommand(
-      ROVODEV.COMMAND,
-      argv,
-      (newOutput) => {
-        appendToStream(key, newOutput);
-        if (onProgress) onProgress(newOutput);
-      },
-      {
-        streaming: true,
-        maxStdoutBuffer: Number.isFinite(Number(process.env.MCP_MAX_STDOUT_SIZE)) ? Number(process.env.MCP_MAX_STDOUT_SIZE) : undefined,
-      }
-    );
+    
+    try {
+      await executeCommand(
+        ROVODEV.COMMAND,
+        argv,
+        (newOutput) => {
+          appendToStream(key, newOutput);
+          if (onProgress) onProgress(newOutput);
+        },
+        executeOptions
+      );
+    } catch (error) {
+      // Format error with helpful suggestions
+      const formattedError = formatErrorForUser(error);
+      throw new Error(formattedError);
+    }
 
     finalizeStream(key);
 
