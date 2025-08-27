@@ -113,8 +113,11 @@ Install the MCP server for Amazon Q CLI to use Rovodev tools in Q chat sessions.
   ```
 
 **Using tools in Q CLI**: Tools are available with the `rovodev___` prefix:
-- `rovodev___ask-rovodev` - Send messages to Rovodev agent
+- `rovodev___ask-rovodev` - Send messages to Rovodev agent (enhanced with session support)
 - `rovodev___tap-rovodev` - Alias for ask-rovodev
+- `rovodev___session_manager` - Manage isolated sessions for context persistence
+- `rovodev___health_check` - Check server health and CLI availability
+- `rovodev___diagnostics` - Get comprehensive system diagnostics
 - `rovodev___next-chunk` - Fetch next chunk for large responses
 - `rovodev___fetch-chunk` - Fetch specific chunk by index
 - `rovodev___Help` - Show Rovodev CLI help
@@ -181,10 +184,25 @@ Notes:
 This server supports streaming chunk-caching to reduce memory usage for large outputs. The `ask-rovodev` tool streams the CLI output directly into a chunk cache. If the output exceeds the page chunk size, it returns the first chunk and a `cacheKey` so you can fetch subsequent chunks with `next-chunk` or `fetch-chunk`.
 
 ## Tools
-- `ask-rovodev`: `{ message?: string, prompt?: string, configFile?: string, shadow?: boolean, verbose?: boolean, restore?: boolean, args?: string[], pagechunksize?: number }`
+
+### Enhanced Core Tools
+- `ask-rovodev`: `{ message?: string, prompt?: string, configFile?: string, shadow?: boolean, verbose?: boolean, restore?: boolean, sessionId?: string, retries?: number, backoffMs?: number, args?: string[], pagechunksize?: number }`
+  - **New**: Session isolation with `sessionId`, retry logic with `retries`/`backoffMs`
   - **Note**: `yolo` mode is always enabled for non-interactive MCP usage. This ensures silent operation without confirmation prompts.
   - Tip: If your message starts with dashes (e.g., `--example`), the underlying CLI may interpret it as a flag. The server now inserts `--` before such messages to prevent flag parsing.
 - `tap-rovodev`: alias of `ask-rovodev`
+
+### Session Management
+- `session_manager`: `{ action: "create" | "destroy" | "list" | "get" | "cleanup", sessionId?: string, timeoutMs?: number }`
+  - Manage isolated sessions for maintaining context across multiple commands
+
+### Health & Diagnostics  
+- `health_check`: `{ detailed?: boolean }`
+  - Check server health including CLI availability, session manager status, and environment configuration
+- `diagnostics`: `{ includePerformance?: boolean, includeHealth?: boolean, includeSessions?: boolean, includeSystem?: boolean, includeRecentExecutions?: boolean, recentLimit?: number }`
+  - Get comprehensive system diagnostics including performance metrics and resource usage
+
+### Utility Tools
 - `next-chunk`: `{ cacheKey: string }` Fetch the next chunk sequentially from a cached large response
 - `fetch-chunk`: `{ cacheKey: string, chunkIndex: number }` (optional) Fetch a specific chunk by index
 - `Help`: show help from underlying CLI
@@ -193,6 +211,7 @@ This server supports streaming chunk-caching to reduce memory usage for large ou
 Server behavior and tuning via env vars:
 - Logging level: `MCP_LOG_LEVEL` (debug | info | warn | error | silent)
 - Exec timeout: `MCP_EXEC_TIMEOUT_MS` (kill underlying CLI after N ms; includes partial stdout tail in error)
+- Max stdout buffer: `MCP_MAX_STDOUT_SIZE` (maximum output buffer size before termination)
 - Working directory: `MCP_CWD` (set process cwd for the underlying CLI)
 - Chunk cache TTL: `MCP_CHUNK_TTL_MS` (default 20 minutes)
 - Chunk cache max entries: `MCP_CHUNK_MAX_ENTRIES` (default 500)

@@ -1,18 +1,62 @@
 import { spawn } from "child_process";
 import { Logger } from "./logger.js";
+import { RetryManager, ErrorClassifier, formatErrorForUser } from "./errorHandler.js";
+import { sessionManager, type SessionConfig } from "./sessionManager.js";
+import { performanceMonitor } from "./performanceMonitor.js";
+
+export interface ExecuteOptions {
+  streaming?: boolean;
+  maxStdoutBuffer?: number;
+  sessionId?: string;
+  retries?: number;
+  backoffMs?: number;
+}
 
 export async function executeCommand(
   command: string,
   args: string[],
   onProgress?: (newOutput: string) => void,
-  options?: { streaming?: boolean; maxStdoutBuffer?: number }
+  options?: ExecuteOptions
+): Promise<string> {
+  // Apply retry logic if specified
+  if (options?.retries && options.retries > 1) {
+    return RetryManager.withRetry(
+      () => executeCommandOnce(command, args, onProgress, options),
+      options.retries,
+      options.backoffMs
+    );
+  }
+  
+  return executeCommandOnce(command, args, onProgress, options);
+}
+
+async function executeCommandOnce(
+  command: string,
+  args: string[],
+  onProgress?: (newOutput: string) => void,
+  options?: ExecuteOptions
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
     Logger.commandExecution(command, args, startTime);
+    
+    // Record command execution start for monitoring
+    const executionId = performanceMonitor.recordCommandStart(command, args);
 
     const timeoutMs = Number.isFinite(Number(process.env.MCP_EXEC_TIMEOUT_MS)) ? Number(process.env.MCP_EXEC_TIMEOUT_MS) : undefined;
-    const cwd = process.env.MCP_CWD && process.env.MCP_CWD.trim() !== "" ? process.env.MCP_CWD : undefined;
+    
+    // Determine working directory - session takes priority over global MCP_CWD
+    let cwd = process.env.MCP_CWD && process.env.MCP_CWD.trim() !== "" ? process.env.MCP_CWD : undefined;
+    
+    if (options?.sessionId) {
+      const session = sessionManager.getSession(options.sessionId);
+      if (session) {
+        cwd = session.workingDir;
+        Logger.debug("Using session working directory:", cwd);
+      } else {
+        Logger.warn("Session not found, using default working directory:", options.sessionId);
+      }
+    }
 
     const child = spawn(command, args, {
       env: process.env,
@@ -33,8 +77,14 @@ export async function executeCommand(
       timeout = setTimeout(() => {
         if (!isResolved) {
           isResolved = true;
-          child.kill("SIGKILL");
-          Logger.error("process timeout:", { timeoutMs });
+          // Graceful termination first, then forceful
+          child.kill("SIGTERM");
+          setTimeout(() => {
+            if (!child.killed) {
+              child.kill("SIGKILL");
+            }
+          }, 2000); // Give 2 seconds for graceful shutdown
+          Logger.error("process timeout:", { timeoutMs, pid: child.pid });
           const tail = stdout.length > 2000 ? stdout.slice(-2000) : stdout;
           reject(new Error(`Command timed out after ${timeoutMs}ms. Partial output (tail): ${tail}`));
         }
@@ -58,7 +108,13 @@ export async function executeCommand(
         }
       }
       if (maxBuffer && stdout.length > maxBuffer) {
-        child.kill("SIGKILL");
+        Logger.warn("Output buffer exceeded, terminating process:", { maxBuffer, currentSize: stdout.length, pid: child.pid });
+        child.kill("SIGTERM");
+        setTimeout(() => {
+          if (!child.killed) {
+            child.kill("SIGKILL");
+          }
+        }, 1000);
       }
     });
 
@@ -85,7 +141,9 @@ export async function executeCommand(
         isResolved = true;
         if (timeout) clearTimeout(timeout);
         Logger.error("process error:", err);
-        reject(new Error(`Failed to spawn command: ${err.message}`));
+        const classified = ErrorClassifier.classify(err);
+        performanceMonitor.recordCommandEnd(command, false, classified.type);
+        reject(new Error(`Failed to spawn command: ${classified.message}`));
       }
     });
 
@@ -95,6 +153,7 @@ export async function executeCommand(
         if (timeout) clearTimeout(timeout);
         if (code === 0) {
           Logger.commandComplete(startTime, code, stdout.length);
+          performanceMonitor.recordCommandEnd(command, true);
           resolve(stdout.trim());
         } else {
           Logger.commandComplete(startTime, code ?? -1);
@@ -110,7 +169,9 @@ export async function executeCommand(
             errorMessage = `Command Error: ${stderr.trim()}\n\nPlease ensure rovodev CLI is installed and accessible in your PATH.`;
           }
           
-          reject(new Error(`Command failed with exit code ${code}: ${errorMessage}${outTail}`));
+          const classified = ErrorClassifier.classify(new Error(errorMessage));
+          performanceMonitor.recordCommandEnd(command, false, classified.type);
+          reject(new Error(errorMessage + outTail));
         }
       }
     });
