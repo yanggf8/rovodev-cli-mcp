@@ -53,7 +53,21 @@ export async function executeCommand(command, args, onProgress, options) {
             }
         });
         child.stderr.on("data", (data) => {
-            stderr += data.toString();
+            const chunk = data.toString();
+            stderr += chunk;
+            // Check for authentication errors and fail fast
+            const authErrorPatterns = [
+                /api.?key/i,
+                /auth/i,
+                /unauthorized/i,
+                /forbidden/i,
+                /invalid/i,
+                /expired/i,
+                /token/i
+            ];
+            if (authErrorPatterns.some(pattern => pattern.test(chunk))) {
+                Logger.error("Authentication error detected:", chunk.trim());
+            }
         });
         child.on("error", (err) => {
             if (!isResolved) {
@@ -76,7 +90,16 @@ export async function executeCommand(command, args, onProgress, options) {
                 else {
                     Logger.commandComplete(startTime, code ?? -1);
                     const outTail = stdout ? `\nSTDOUT (tail): ${(stdout.length > 2000 ? stdout.slice(-2000) : stdout)}` : "";
-                    reject(new Error(`Command failed with exit code ${code}: ${stderr.trim() || "Unknown error"}${outTail}`));
+                    // Enhance error message for common issues
+                    let errorMessage = stderr.trim() || "Unknown error";
+                    // Check for specific error types and provide clearer messages
+                    if (/api.?key/i.test(stderr) || /auth/i.test(stderr) || /unauthorized/i.test(stderr)) {
+                        errorMessage = `Authentication Error: ${stderr.trim()}\n\nPlease check your rovodev CLI API key configuration.`;
+                    }
+                    else if (/not.found/i.test(stderr) || /command.not.found/i.test(stderr)) {
+                        errorMessage = `Command Error: ${stderr.trim()}\n\nPlease ensure rovodev CLI is installed and accessible in your PATH.`;
+                    }
+                    reject(new Error(`Command failed with exit code ${code}: ${errorMessage}${outTail}`));
                 }
             }
         });
