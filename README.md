@@ -155,9 +155,14 @@ Notes:
 
 - "Failed to connect" in `claude mcp list`
   - Ensure your Node is >= 18 (`node -v`).
-  - Ensure no output is written to stdout (stdout is reserved for the MCP protocol). This repo’s logger writes to stderr only.
+  - Ensure no output is written to stdout (stdout is reserved for the MCP protocol). This repo's logger writes to stderr only.
   - Try registering the local path: `claude mcp add -s user rovodev -- node "$(pwd)/dist/index.js"`.
   - If using WSL, register from the Linux side; Claude Code on Windows can discover WSL user-scoped config.
+
+- Authentication errors (API key issues)
+  - If you see "Authentication Error" messages, your rovodev CLI API key may be expired or invalid
+  - Check your rovodev CLI configuration and update your API key
+  - The server now detects authentication issues and provides clear error messages instead of hanging
 
 - Underlying CLI not found
   - The default command is `acli`. Install it or override:
