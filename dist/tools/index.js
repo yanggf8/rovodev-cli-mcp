@@ -26,6 +26,12 @@ const diagnosticsTool = {
     execute: executeDiagnostics
 };
 toolRegistry.push(askRovodevTool, pingTool, helpTool, fetchChunkTool, nextChunkTool, sessionManagerTool, healthCheckTool, diagnosticsTool);
+// Backwards-compatible aliases for renamed tools
+const pingAlias = { ...pingTool, name: "Ping" };
+const helpAlias = { ...helpTool, name: "Help" };
+const healthCheckAlias = { ...healthCheckTool, name: "health_check" };
+const sessionManagerAlias = { ...sessionManagerTool, name: "session_manager" };
+toolRegistry.push(pingAlias, helpAlias, healthCheckAlias, sessionManagerAlias);
 // Alias: tap-rovodev behaves exactly like ask-rovodev
 const tapRovodev = { ...askRovodevTool, name: "tap-rovodev" };
 toolRegistry.push(tapRovodev);

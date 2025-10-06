@@ -22,7 +22,7 @@ import { formatErrorForUser } from "./utils/errorHandler.js";
 
 const server = new Server(
   { name: "rovodev-cli-mcp", version: "0.1.0" },
-  { capabilities: { tools: {}, prompts: {}, notifications: {}, logging: {} } },
+  { capabilities: { tools: {}, prompts: {}, notifications: {} } },
 );
 
 // Track progress per request (supports concurrent tool calls)
@@ -87,7 +87,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
   const toolName = request.params.name;
   if (!toolExists(toolName)) throw new Error(`Unknown tool: ${toolName}`);
 
-  const progressToken = (request.params as any)._meta?.progressToken;
+  const progressToken = (request as any)._meta?.progressToken;
   startProgressUpdates(toolName, progressToken);
   try {
     const args: ToolArguments = (request.params.arguments as ToolArguments) || {};

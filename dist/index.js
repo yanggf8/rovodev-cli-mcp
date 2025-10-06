@@ -6,7 +6,7 @@ import { Logger } from "./utils/logger.js";
 import { PROTOCOL } from "./constants.js";
 import { getToolDefinitions, getPromptDefinitions, executeTool, toolExists, getPromptMessage } from "./tools/index.js";
 import { formatErrorForUser } from "./utils/errorHandler.js";
-const server = new Server({ name: "rovodev-cli-mcp", version: "0.1.0" }, { capabilities: { tools: {}, prompts: {}, notifications: {}, logging: {} } });
+const server = new Server({ name: "rovodev-cli-mcp", version: "0.1.0" }, { capabilities: { tools: {}, prompts: {}, notifications: {} } });
 // Track progress per request (supports concurrent tool calls)
 const progressContexts = new Map();
 async function sendNotification(method, params) {
@@ -82,7 +82,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const toolName = request.params.name;
     if (!toolExists(toolName))
         throw new Error(`Unknown tool: ${toolName}`);
-    const progressToken = request.params._meta?.progressToken;
+    const progressToken = request._meta?.progressToken;
     startProgressUpdates(toolName, progressToken);
     try {
         const args = request.params.arguments || {};

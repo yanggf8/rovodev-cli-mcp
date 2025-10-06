@@ -111,18 +111,20 @@ export async function executeDiagnostics(args: ToolArguments, onProgress?: (newO
     const overallStatus = determineDiagnosticStatus(diagnostics);
     diagnostics.overallStatus = overallStatus;
     
-    return JSON.stringify(diagnostics, null, 2);
+    const json = JSON.stringify(diagnostics, null, 2);
+    return `Diagnostics: ${diagnostics.overallStatus.status.toUpperCase()}\n\n\u0060\u0060\u0060json\n${json}\n\u0060\u0060\u0060`;
     
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     Logger.error("Diagnostics failed:", error);
     
-    return JSON.stringify({
+    const json = JSON.stringify({
       timestamp: new Date(),
       status: "error",
       error: message,
       message: `Diagnostics collection failed: ${message}`
     }, null, 2);
+    return `Diagnostics: ERROR\n\n\u0060\u0060\u0060json\n${json}\n\u0060\u0060\u0060`;
   }
 }
 

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ROVODEV } from "../constants.js";
 import { executeCommand } from "../utils/commandExecutor.js";
 export const pingTool = {
-    name: "Ping",
+    name: "ping",
     description: "Echo back a message for testing",
     zodSchema: z.object({ message: z.string().optional().describe("Message to echo back") }),
     async execute(args) {
@@ -13,7 +13,7 @@ export const pingTool = {
     },
 };
 export const helpTool = {
-    name: "Help",
+    name: "help",
     description: "Show underlying Rovodev CLI help output",
     zodSchema: z.object({}),
     async execute() {

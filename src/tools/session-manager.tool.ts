@@ -4,7 +4,7 @@ import { Logger } from "../utils/logger.js";
 import { ToolArguments } from "../constants.js";
 
 export const sessionManagerSchema = {
-  name: "session_manager",
+  name: "session-manager",
   description: "Manage isolated sessions for Rovodev CLI operations. Each session has its own working directory and can be used to maintain context across multiple commands.",
   inputSchema: z.object({
     action: z.enum(["create", "destroy", "list", "get", "cleanup"], {
@@ -23,16 +23,19 @@ export async function executeSessionManager(args: ToolArguments, onProgress?: (n
     switch (typedArgs.action) {
       case "create": {
         const session = await sessionManager.createSession(typedArgs.timeoutMs);
-        return JSON.stringify({
-          success: true,
-          session: {
-            id: session.id,
-            workingDir: session.workingDir,
-            createdAt: session.createdAt,
-            timeoutMs: session.timeoutMs
-          },
-          message: `Created session ${session.id}`
-        }, null, 2);
+        {
+          const json = JSON.stringify({
+            success: true,
+            session: {
+              id: session.id,
+              workingDir: session.workingDir,
+              createdAt: session.createdAt,
+              timeoutMs: session.timeoutMs
+            },
+            message: `Created session ${session.id}`
+          }, null, 2);
+          return `Session manager: CREATED\n\n\u0060\u0060\u0060json\n${json}\n\u0060\u0060\u0060`;
+        }
       }
       
       case "destroy": {
@@ -41,23 +44,29 @@ export async function executeSessionManager(args: ToolArguments, onProgress?: (n
         }
         
         await sessionManager.destroySession(typedArgs.sessionId);
-        return JSON.stringify({
-          success: true,
-          message: `Destroyed session ${typedArgs.sessionId}`
-        }, null, 2);
+        {
+          const json = JSON.stringify({
+            success: true,
+            message: `Destroyed session ${typedArgs.sessionId}`
+          }, null, 2);
+          return `Session manager: DESTROYED\n\n\u0060\u0060\u0060json\n${json}\n\u0060\u0060\u0060`;
+        }
       }
       
       case "list": {
         const stats = sessionManager.getSessionStats();
-        return JSON.stringify({
-          success: true,
-          stats: {
-            totalSessions: stats.total,
-            oldestSession: stats.oldest,
-            newestSession: stats.newest
-          },
-          message: `Found ${stats.total} active sessions`
-        }, null, 2);
+        {
+          const json = JSON.stringify({
+            success: true,
+            stats: {
+              totalSessions: stats.total,
+              oldestSession: stats.oldest,
+              newestSession: stats.newest
+            },
+            message: `Found ${stats.total} active sessions`
+          }, null, 2);
+          return `Session manager: LIST\n\n\u0060\u0060\u0060json\n${json}\n\u0060\u0060\u0060`;
+        }
       }
       
       case "get": {
@@ -67,23 +76,27 @@ export async function executeSessionManager(args: ToolArguments, onProgress?: (n
         
         const session = sessionManager.getSession(typedArgs.sessionId);
         if (!session) {
-          return JSON.stringify({
+          const json = JSON.stringify({
             success: false,
             message: `Session ${typedArgs.sessionId} not found`
           }, null, 2);
+          return `Session manager: NOT FOUND\n\n\u0060\u0060\u0060json\n${json}\n\u0060\u0060\u0060`;
         }
         
-        return JSON.stringify({
-          success: true,
-          session: {
-            id: session.id,
-            workingDir: session.workingDir,
-            createdAt: session.createdAt,
-            lastAccessedAt: session.lastAccessedAt,
-            timeoutMs: session.timeoutMs
-          },
-          message: `Retrieved session ${session.id}`
-        }, null, 2);
+        {
+          const json = JSON.stringify({
+            success: true,
+            session: {
+              id: session.id,
+              workingDir: session.workingDir,
+              createdAt: session.createdAt,
+              lastAccessedAt: session.lastAccessedAt,
+              timeoutMs: session.timeoutMs
+            },
+            message: `Retrieved session ${session.id}`
+          }, null, 2);
+          return `Session manager: GET\n\n\u0060\u0060\u0060json\n${json}\n\u0060\u0060\u0060`;
+        }
       }
       
       case "cleanup": {
@@ -92,15 +105,18 @@ export async function executeSessionManager(args: ToolArguments, onProgress?: (n
         // Since cleanup is automatic via periodic timer, we just report current stats
         const afterStats = sessionManager.getSessionStats();
         
-        return JSON.stringify({
-          success: true,
-          cleanup: {
-            before: beforeStats.total,
-            after: afterStats.total,
-            removed: beforeStats.total - afterStats.total
-          },
-          message: "Session cleanup completed"
-        }, null, 2);
+        {
+          const json = JSON.stringify({
+            success: true,
+            cleanup: {
+              before: beforeStats.total,
+              after: afterStats.total,
+              removed: beforeStats.total - afterStats.total
+            },
+            message: "Session cleanup completed"
+          }, null, 2);
+          return `Session manager: CLEANUP\n\n\u0060\u0060\u0060json\n${json}\n\u0060\u0060\u0060`;
+        }
       }
       
       default:
@@ -110,10 +126,11 @@ export async function executeSessionManager(args: ToolArguments, onProgress?: (n
     const message = error instanceof Error ? error.message : String(error);
     Logger.error("Session manager error:", error);
     
-    return JSON.stringify({
+    const json = JSON.stringify({
       success: false,
       error: message,
       message: `Session manager operation failed: ${message}`
     }, null, 2);
+    return `Session manager: ERROR\n\n\u0060\u0060\u0060json\n${json}\n\u0060\u0060\u0060`;
   }
 }

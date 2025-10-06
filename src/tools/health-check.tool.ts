@@ -4,7 +4,7 @@ import { Logger } from "../utils/logger.js";
 import { ToolArguments } from "../constants.js";
 
 export const healthCheckSchema = {
-  name: "health_check",
+  name: "health-check",
   description: "Check the health status of the Rovodev CLI MCP server, including Rovodev CLI availability, session manager status, and environment configuration.",
   inputSchema: z.object({
     detailed: z.boolean().optional().describe("Include detailed diagnostic information in the response (default: false)")
@@ -20,7 +20,8 @@ export async function executeHealthCheck(args: ToolArguments, onProgress?: (newO
     
     // Format the response based on whether detailed info is requested
     if (typedArgs.detailed) {
-      return JSON.stringify(healthStatus, null, 2);
+      const json = JSON.stringify(healthStatus, null, 2);
+      return `Health check (detailed): OK\n\n\u0060\u0060\u0060json\n${json}\n\u0060\u0060\u0060`;
     }
     
     // Simplified response for basic health check
@@ -36,17 +37,18 @@ export async function executeHealthCheck(args: ToolArguments, onProgress?: (newO
         duration: check.duration
       }))
     };
-    
-    return JSON.stringify(summary, null, 2);
+    const json = JSON.stringify(summary, null, 2);
+    return `Health check: ${summary.status.toUpperCase()}\n\n\u0060\u0060\u0060json\n${json}\n\u0060\u0060\u0060`;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     Logger.error("Health check failed:", error);
     
-    return JSON.stringify({
+    const json = JSON.stringify({
       status: "unhealthy",
       timestamp: new Date(),
       error: message,
       message: `Health check failed: ${message}`
     }, null, 2);
+    return `Health check: UNHEALTHY\n\n\u0060\u0060\u0060json\n${json}\n\u0060\u0060\u0060`;
   }
 }

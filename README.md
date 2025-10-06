@@ -1,5 +1,31 @@
 # Rovodev CLI MCP
 
+## Using with Claude MCP
+
+- Command: `rovodev-cli-mcp` (from dist/index.js)
+- Transport: stdio
+- Node requirement: >= 18
+- Environment variables:
+  - MCP_LOG_LEVEL=debug|info|warn|error|silent (stderr only)
+  - MCP_EXEC_TIMEOUT_MS: hard timeout for CLI exec
+  - MCP_MAX_STDOUT_SIZE: kill process if stdout grows beyond this size
+  - MCP_CWD: default working directory (overridden by session_manager sessions)
+  - ROVODEV_CLI_PATH / ROVODEV_CMD: CLI binary (default: `acli`)
+  - ROVODEV_SUBCOMMAND: subcommand path (default: `rovodev run`)
+
+### Progress updates
+- The server reads the progress token from the top-level request meta and emits `notifications/progress` keepalive updates with a short output preview.
+
+### Tool names and aliases
+- Primary tool names use kebab-case: `ask-rovodev`, `ping`, `help`, `fetch-chunk`, `next-chunk`, `health-check`, `session-manager`, `diagnostics`.
+- Backward-compatible aliases are provided: `Ping`, `Help`, `health_check`, `session_manager`, and `tap-rovodev` (alias of `ask-rovodev`).
+
+### Large output handling
+- ask-rovodev streams output into a cache and returns the first chunk. Use `next-chunk` or `fetch-chunk` with the provided cacheKey to paginate.
+
+### JSON outputs
+- Tools that return structured data provide a one-line summary followed by a JSON code block to help clients display and reason over the result.
+
 An MCP server wrapper that exposes Rovodev CLI as MCP tools. Modeled after `gemini-mcp-tool`.
 
 ## Install

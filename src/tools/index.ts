@@ -31,6 +31,14 @@ const diagnosticsTool: UnifiedTool = {
 
 toolRegistry.push(askRovodevTool, pingTool, helpTool, fetchChunkTool, nextChunkTool, sessionManagerTool, healthCheckTool, diagnosticsTool);
 
+// Backwards-compatible aliases for renamed tools
+const pingAlias: UnifiedTool = { ...pingTool, name: "Ping" };
+const helpAlias: UnifiedTool = { ...helpTool, name: "Help" };
+const healthCheckAlias: UnifiedTool = { ...healthCheckTool, name: "health_check" };
+const sessionManagerAlias: UnifiedTool = { ...sessionManagerTool, name: "session_manager" };
+
+toolRegistry.push(pingAlias, helpAlias, healthCheckAlias, sessionManagerAlias);
+
 // Alias: tap-rovodev behaves exactly like ask-rovodev
 const tapRovodev: UnifiedTool = { ...askRovodevTool, name: "tap-rovodev" };
 toolRegistry.push(tapRovodev);
