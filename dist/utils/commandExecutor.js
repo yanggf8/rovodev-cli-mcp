@@ -41,6 +41,8 @@ async function executeCommandOnce(command, args, onProgress, options) {
         let lastReported = 0;
         const streaming = options?.streaming === true;
         const maxBuffer = Number.isFinite(Number(options?.maxStdoutBuffer)) ? Number(options?.maxStdoutBuffer) : undefined;
+        let bufferExceeded = false;
+        let tailBuffer = ""; // rolling buffer for tail when streaming
         let timeout;
         if (timeoutMs && timeoutMs > 0) {
             timeout = setTimeout(() => {
@@ -64,10 +66,15 @@ async function executeCommandOnce(command, args, onProgress, options) {
         child.stdout.on("data", (data) => {
             const chunk = data.toString();
             if (streaming) {
-                // forward chunk immediately and do not buffer entire output
-                stdout += chunk; // still keep full for tail and success return; can be further optimized later
+                // forward chunk immediately
                 if (onProgress)
                     onProgress(chunk);
+                // maintain only a rolling tail for diagnostics
+                tailBuffer += chunk;
+                if (tailBuffer.length > 65536) {
+                    tailBuffer = tailBuffer.slice(-65536);
+                }
+                // optionally keep full stdout only if needed (avoid for memory pressure)
             }
             else {
                 stdout += chunk;
@@ -77,8 +84,10 @@ async function executeCommandOnce(command, args, onProgress, options) {
                     onProgress(newContent);
                 }
             }
-            if (maxBuffer && stdout.length > maxBuffer) {
-                Logger.warn("Output buffer exceeded, terminating process:", { maxBuffer, currentSize: stdout.length, pid: child.pid });
+            const currentSize = streaming ? tailBuffer.length : stdout.length;
+            if (maxBuffer && currentSize > maxBuffer) {
+                bufferExceeded = true;
+                Logger.warn("Output buffer exceeded, terminating process:", { maxBuffer, currentSize, pid: child.pid });
                 child.kill("SIGTERM");
                 setTimeout(() => {
                     if (!child.killed) {
@@ -111,7 +120,7 @@ async function executeCommandOnce(command, args, onProgress, options) {
                     clearTimeout(timeout);
                 Logger.error("process error:", err);
                 const classified = ErrorClassifier.classify(err);
-                performanceMonitor.recordCommandEnd(command, false, classified.type);
+                performanceMonitor.recordCommandEnd(executionId, false, classified.type);
                 reject(new Error(`Failed to spawn command: ${classified.message}`));
             }
         });
@@ -121,15 +130,18 @@ async function executeCommandOnce(command, args, onProgress, options) {
                 if (timeout)
                     clearTimeout(timeout);
                 if (code === 0) {
-                    Logger.commandComplete(startTime, code, stdout.length);
-                    performanceMonitor.recordCommandEnd(command, true);
-                    resolve(stdout.trim());
+                    const bytes = streaming ? (tailBuffer.length) : stdout.length;
+                    Logger.commandComplete(startTime, code, bytes);
+                    performanceMonitor.recordCommandEnd(executionId, true);
+                    const output = streaming ? tailBuffer : stdout;
+                    resolve(output.trim());
                 }
                 else {
                     Logger.commandComplete(startTime, code ?? -1);
-                    const outTail = stdout ? `\nSTDOUT (tail): ${(stdout.length > 2000 ? stdout.slice(-2000) : stdout)}` : "";
+                    const tailSrc = streaming ? tailBuffer : stdout;
+                    const outTail = tailSrc ? `\nSTDOUT (tail): ${(tailSrc.length > 2000 ? tailSrc.slice(-2000) : tailSrc)}` : "";
                     // Enhance error message for common issues
-                    let errorMessage = stderr.trim() || "Unknown error";
+                    let errorMessage = `Command failed with exit code ${code ?? -1}. ` + (stderr.trim() || "Unknown error");
                     // Check for specific error types and provide clearer messages
                     if (/api.?key/i.test(stderr) || /auth/i.test(stderr) || /unauthorized/i.test(stderr)) {
                         errorMessage = `Authentication Error: ${stderr.trim()}\n\nPlease check your rovodev CLI API key configuration.`;
@@ -137,8 +149,11 @@ async function executeCommandOnce(command, args, onProgress, options) {
                     else if (/not.found/i.test(stderr) || /command.not.found/i.test(stderr)) {
                         errorMessage = `Command Error: ${stderr.trim()}\n\nPlease ensure rovodev CLI is installed and accessible in your PATH.`;
                     }
+                    if (bufferExceeded && maxBuffer) {
+                        errorMessage += `\nOutput buffer exceeded (max: ${maxBuffer} bytes).`;
+                    }
                     const classified = ErrorClassifier.classify(new Error(errorMessage));
-                    performanceMonitor.recordCommandEnd(command, false, classified.type);
+                    performanceMonitor.recordCommandEnd(executionId, false, classified.type);
                     reject(new Error(errorMessage + outTail));
                 }
             }

@@ -6,6 +6,7 @@ class PerformanceMonitor {
     recordCommandStart(command, args) {
         const executionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const record = {
+            id: executionId,
             command,
             args,
             startTime: Date.now(),
@@ -18,12 +19,8 @@ class PerformanceMonitor {
         }
         return executionId;
     }
-    recordCommandEnd(command, success, errorType) {
-        // Find the most recent matching command execution
-        const record = this.executions
-            .slice()
-            .reverse()
-            .find(r => r.command === command && r.endTime === undefined);
+    recordCommandEnd(executionId, success, errorType) {
+        const record = this.executions.find(r => r.id === executionId && r.endTime === undefined);
         if (record) {
             record.endTime = Date.now();
             record.success = success;
@@ -34,6 +31,7 @@ class PerformanceMonitor {
                 this.errorCounts.set(errorType, count + 1);
             }
             Logger.debug("Command execution recorded:", {
+                id: record.id,
                 command: record.command,
                 success: record.success,
                 durationMs: record.durationMs,

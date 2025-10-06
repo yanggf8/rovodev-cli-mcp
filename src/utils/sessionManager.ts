@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { mkdir, rmdir, stat } from "fs/promises";
+import { mkdir, rm, stat } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { Logger } from "./logger.js";
@@ -76,7 +76,7 @@ class SessionManager {
     if (!session) return;
 
     try {
-      await rmdir(session.workingDir, { recursive: true });
+      await rm(session.workingDir, { recursive: true, force: true });
       this.sessions.delete(sessionId);
       Logger.debug("Destroyed session:", sessionId);
     } catch (error) {

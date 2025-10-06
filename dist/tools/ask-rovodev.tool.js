@@ -15,6 +15,7 @@ export const askRovodevTool = {
         shadow: z.boolean().optional().describe("Enable shadow mode (--shadow)"),
         verbose: z.boolean().optional().describe("Enable verbose tool output (--verbose)"),
         restore: z.boolean().optional().describe("Continue last session if available (--restore)"),
+        yolo: z.boolean().optional().describe("Enable yolo mode (non-interactive). Default: true in MCP"),
         // Session management
         sessionId: z.string().optional().describe("Session ID to use for isolated execution context"),
         // Enhanced error handling
@@ -42,8 +43,10 @@ export const askRovodevTool = {
             argv.push(ROVODEV.FLAGS.VERBOSE);
         if (args.restore)
             argv.push(ROVODEV.FLAGS.RESTORE);
-        // Always enable yolo mode for MCP server usage (non-interactive mode)
-        argv.push(ROVODEV.FLAGS.YOLO);
+        // Enable yolo mode by default for MCP server usage (non-interactive), unless explicitly disabled
+        if (args.yolo !== false) {
+            argv.push(ROVODEV.FLAGS.YOLO);
+        }
         // Extra raw args before the message
         if (Array.isArray(args.args) && args.args.length) {
             argv.push(...args.args);

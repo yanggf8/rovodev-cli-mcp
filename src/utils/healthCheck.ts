@@ -180,16 +180,7 @@ class HealthChecker {
       message = `High memory usage: ${Math.round(memUsageMB)}MB`;
     }
     
-    // Check for required environment variables
-    const requiredEnvVars = [];
-    if (!process.env.ROVODEV_CLI_PATH && !process.env.ROVODEV_CMD) {
-      requiredEnvVars.push("ROVODEV_CLI_PATH or ROVODEV_CMD");
-    }
-    
-    if (requiredEnvVars.length > 0) {
-      status = "warn";
-      message = `Missing environment variables: ${requiredEnvVars.join(", ")}`;
-    }
+    // Keep environment details for diagnostics but avoid noisy warnings if defaults work
     
     return {
       status,

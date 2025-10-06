@@ -186,10 +186,10 @@ This server supports streaming chunk-caching to reduce memory usage for large ou
 ## Tools
 
 ### Enhanced Core Tools
-- `ask-rovodev`: `{ message?: string, prompt?: string, configFile?: string, shadow?: boolean, verbose?: boolean, restore?: boolean, sessionId?: string, retries?: number, backoffMs?: number, args?: string[], pagechunksize?: number }`
-  - **New**: Session isolation with `sessionId`, retry logic with `retries`/`backoffMs`
-  - **Note**: `yolo` mode is always enabled for non-interactive MCP usage. This ensures silent operation without confirmation prompts.
-  - Tip: If your message starts with dashes (e.g., `--example`), the underlying CLI may interpret it as a flag. The server now inserts `--` before such messages to prevent flag parsing.
+- `ask-rovodev`: `{ message?: string, prompt?: string, configFile?: string, shadow?: boolean, verbose?: boolean, restore?: boolean, yolo?: boolean, sessionId?: string, retries?: number, backoffMs?: number, args?: string[], pagechunksize?: number }`
+  - New: Session isolation with `sessionId`, retry logic with `retries`/`backoffMs`
+  - Default: `yolo` mode is enabled for non-interactive MCP usage; set `yolo: false` to disable if you need interactive behavior.
+  - Tip: If your message starts with dashes (e.g., `--example`), the underlying CLI may interpret it as a flag. The server inserts `--` before such messages to prevent flag parsing.
 - `tap-rovodev`: alias of `ask-rovodev`
 
 ### Session Management

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { UnifiedTool } from "./registry.js";
 import { ROVODEV, ToolArguments, CHUNKING } from "../constants.js";
 import { executeCommand, type ExecuteOptions } from "../utils/commandExecutor.js";
-import { cacheText, createStreamingCache, appendToStream, finalizeStream, getCachedChunk } from "../utils/chunkCache.js";
+import { createStreamingCache, appendToStream, finalizeStream, getCachedChunk } from "../utils/chunkCache.js";
 import { formatErrorForUser } from "../utils/errorHandler.js";
 
 export const askRovodevTool: UnifiedTool = {
@@ -18,6 +18,7 @@ export const askRovodevTool: UnifiedTool = {
     shadow: z.boolean().optional().describe("Enable shadow mode (--shadow)"),
     verbose: z.boolean().optional().describe("Enable verbose tool output (--verbose)"),
     restore: z.boolean().optional().describe("Continue last session if available (--restore)"),
+    yolo: z.boolean().optional().describe("Enable yolo mode (non-interactive). Default: true in MCP"),
 
     // Session management
     sessionId: z.string().optional().describe("Session ID to use for isolated execution context"),
@@ -49,8 +50,10 @@ export const askRovodevTool: UnifiedTool = {
     if ((args as any).verbose) argv.push(ROVODEV.FLAGS.VERBOSE);
     if ((args as any).restore) argv.push(ROVODEV.FLAGS.RESTORE);
     
-    // Always enable yolo mode for MCP server usage (non-interactive mode)
-    argv.push(ROVODEV.FLAGS.YOLO);
+    // Enable yolo mode by default for MCP server usage (non-interactive), unless explicitly disabled
+    if ((args as any).yolo !== false) {
+      argv.push(ROVODEV.FLAGS.YOLO);
+    }
 
     // Extra raw args before the message
     if (Array.isArray((args as any).args) && (args as any).args.length) {

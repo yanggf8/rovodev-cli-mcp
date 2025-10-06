@@ -18,6 +18,7 @@ export interface PerformanceMetrics {
 }
 
 export interface CommandExecutionRecord {
+  id: string;
   command: string;
   args: string[];
   startTime: number;
@@ -35,6 +36,7 @@ class PerformanceMonitor {
   recordCommandStart(command: string, args: string[]): string {
     const executionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const record: CommandExecutionRecord = {
+      id: executionId,
       command,
       args,
       startTime: Date.now(),
@@ -51,12 +53,8 @@ class PerformanceMonitor {
     return executionId;
   }
 
-  recordCommandEnd(command: string, success: boolean, errorType?: string): void {
-    // Find the most recent matching command execution
-    const record = this.executions
-      .slice()
-      .reverse()
-      .find(r => r.command === command && r.endTime === undefined);
+  recordCommandEnd(executionId: string, success: boolean, errorType?: string): void {
+    const record = this.executions.find(r => r.id === executionId && r.endTime === undefined);
     
     if (record) {
       record.endTime = Date.now();
@@ -70,6 +68,7 @@ class PerformanceMonitor {
       }
       
       Logger.debug("Command execution recorded:", {
+        id: record.id,
         command: record.command,
         success: record.success,
         durationMs: record.durationMs,

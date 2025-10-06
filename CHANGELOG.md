@@ -8,14 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **BREAKING**: `ask-rovodev` and `tap-rovodev` tools now enable `--yolo` mode by default for non-interactive MCP usage
-- Updated tool descriptions to reflect default yolo mode behavior
-- Users can still disable yolo mode by explicitly setting `yolo: false`
+- `ask-rovodev` and `tap-rovodev` tools now enable `--yolo` mode by default for non-interactive MCP usage
+- Users can disable yolo mode by explicitly setting `yolo: false`
 
 ### Improved
-- MCP server now works seamlessly without requiring users to remember the yolo flag
+- Error messages now include exit codes and note when the max output buffer was exceeded
+- Streaming mode reduces memory usage by keeping only a rolling output tail
+- Performance metrics correlate executions by ID for accurate concurrency tracking
+- Health check no longer warns about unset env when defaults work
+- MCP server works seamlessly without requiring users to remember the yolo flag
 - Better user experience for automated/scripted usage
-- Maintains backward compatibility for users who need interactive mode
+- Backward compatible defaults
 
 ## [0.1.0] - 2025-08-17
 
